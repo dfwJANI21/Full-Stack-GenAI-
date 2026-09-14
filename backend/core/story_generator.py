@@ -1,14 +1,9 @@
-from http import client
-
+import os
 from sqlalchemy.orm import Session
 from core.models import StoryLLMResponse, StoryNodeLLM
-from dotenv import load_dotenv
-load_dotenv()
-import os
-from langchain_nvidia_ai_endpoints import ChatNVIDIA
-from langchain_core.prompts import ChatPromptTemplate
+from core.config import settings
+from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import PydanticOutputParser
-
 from core.prompts import STORY_PROMPT
 from models.story import Story, StoryNode
 
@@ -16,13 +11,37 @@ from models.story import Story, StoryNode
 class StoryGenerator:
     @classmethod
     def _get_llm(cls):
-        return ChatNVIDIA(
-            model="moonshotai/kimi-k3",
-            api_key=os.getenv("OPENAI_API_KEY"),
-            temperature=1,
-            timeout=300,
-            max_completion_tokens=4096
-        )
+        api_key = (os.getenv("OPENAI_API_KEY") or getattr(settings, "OPENAI_API_KEY", "")).strip()
+        base_url = (os.getenv("LLM_BASE_URL") or getattr(settings, "LLM_BASE_URL", "")).strip()
+        model = (os.getenv("LLM_MODEL") or getattr(settings, "LLM_MODEL", "")).strip()
+
+        if not base_url:
+            if api_key.startswith("gsk_"):
+                base_url = "https://api.groq.com/openai/v1"
+                if not model:
+                    model = "llama-3.3-70b-versatile"
+            elif api_key.startswith("sk-or-"):
+                base_url = "https://openrouter.ai/api/v1"
+                if not model:
+                    model = "meta-llama/llama-3.3-70b-instruct"
+            elif api_key.startswith("nvapi-"):
+                base_url = "https://integrate.api.nvidia.com/v1"
+                if not model:
+                    model = "meta/llama-3.1-8b-instruct"
+
+        if not model:
+            model = "llama-3.3-70b-versatile" if "groq" in base_url else "gpt-4o-mini"
+
+        kwargs = {
+            "model": model,
+            "api_key": api_key,
+            "temperature": 0.7,
+            "timeout": 120,
+        }
+        if base_url:
+            kwargs["base_url"] = base_url
+
+        return ChatOpenAI(**kwargs)
 
     @classmethod
     def generate_story(cls, db: Session, theme: str, session_id: str = "Fantasy") -> Story:
@@ -68,20 +87,25 @@ class StoryGenerator:
       db.add(node)
       db.flush()
 
-      if not node.is_ending and (hasattr(node_data,"option")and node_data.options):
-          options_list = []
-          for option_data in node_data.option:
-              next_node = option_data.nextNode
+      options = getattr(node_data, "options", None)
+      if isinstance(node_data, dict):
+          options = node_data.get("options")
 
-              if isinstance(next_node,dict):
+      if not node.is_ending and options:
+          options_list = []
+          for option_data in options:
+              next_node = getattr(option_data, "nextNode", None) or (option_data.get("nextNode") if isinstance(option_data, dict) else None)
+              text = getattr(option_data, "text", "") or (option_data.get("text", "") if isinstance(option_data, dict) else "")
+
+              if isinstance(next_node, dict):
                   next_node = StoryNodeLLM.model_validate(next_node)
 
-              child_node = cls._process_story_node(db,story_id,next_node,is_root=False)
+              child_node = cls._process_story_node(db, story_id, next_node, is_root=False)
               options_list.append({
-                  "text": option_data.text,
-                  "node_id":child_node.id
+                  "text": text,
+                  "node_id": child_node.id
               })      
-          node.option = options_list        
+          node.options = options_list        
      
       db.flush()
       return node

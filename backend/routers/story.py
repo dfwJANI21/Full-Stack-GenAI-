@@ -67,7 +67,7 @@ def generate_story_task(job_id: str, theme: str, session_id: str):
             job.status = "processing"
             db.commit()
 
-            story = StoryGenerator.generate_story(db, session_id, theme)
+            story = StoryGenerator.generate_story(db, theme=theme, session_id=session_id)
 
             job.story_id = story.id  # todo: update story id
             job.status = "completed"

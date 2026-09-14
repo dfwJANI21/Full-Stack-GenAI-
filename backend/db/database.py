@@ -16,7 +16,7 @@ def get_db():
     try:
         yield db
     finally:
-        db.close
+        db.close()
 def create_tables():
       # Import your models here
     Base.metadata.create_all(bind=engine)
