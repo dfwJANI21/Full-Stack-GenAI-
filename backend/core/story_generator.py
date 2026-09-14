@@ -19,7 +19,7 @@ class StoryGenerator:
             if api_key.startswith("gsk_"):
                 base_url = "https://api.groq.com/openai/v1"
                 if not model:
-                    model = "llama-3.3-70b-versatile"
+                    model = "openai/gpt-oss-120b"
             elif api_key.startswith("sk-or-"):
                 base_url = "https://openrouter.ai/api/v1"
                 if not model:
@@ -30,7 +30,7 @@ class StoryGenerator:
                     model = "meta/llama-3.1-8b-instruct"
 
         if not model:
-            model = "llama-3.3-70b-versatile" if "groq" in base_url else "gpt-4o-mini"
+            model = "openai/gpt-oss-120b" if "groq" in base_url else "gpt-4o-mini"
 
         kwargs = {
             "model": model,
