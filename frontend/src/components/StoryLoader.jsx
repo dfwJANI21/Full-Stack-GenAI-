@@ -1,12 +1,14 @@
 import {useState,useEffect} from 'react';
 
-import {useParam,useNavigate} from "react" 
+import {useParams,useNavigate} from "react-router-dom" 
 import axios from 'axios';
 import LoadingStatus from "./LoadingStatus.jsx"
+import StoryGame from "./StoryGame.jsx";
+
 const API_BASE_URL = "/api"
 
 function StoryLoader(){
-    const {id} = useParam();
+    const {id} = useParams();
     const navigate = useNavigate();
     const [story,setStory] = useState(null);
     const[loading,setLoading] = useState(null);
@@ -53,7 +55,7 @@ function StoryLoader(){
     }
     if (story){
         return <div className="story-loader">
-
+            <StoryGame story={story} onNewStory={createNewStory}/>
         </div>
     }
 
