@@ -94,11 +94,30 @@ class StoryGenerator:
       if not node.is_ending and options:
           options_list = []
           for option_data in options:
+              if isinstance(option_data, dict) and (not option_data.get("text") or not option_data.get("nextNode")):
+                  continue
+
               next_node = getattr(option_data, "nextNode", None) or (option_data.get("nextNode") if isinstance(option_data, dict) else None)
               text = getattr(option_data, "text", "") or (option_data.get("text", "") if isinstance(option_data, dict) else "")
 
+              if not next_node or not text:
+                  continue
+
               if isinstance(next_node, dict):
-                  next_node = StoryNodeLLM.model_validate(next_node)
+                  if "options" in next_node and isinstance(next_node["options"], list):
+                      next_node["options"] = [
+                          opt for opt in next_node["options"]
+                          if isinstance(opt, dict) and opt.get("text") and opt.get("nextNode")
+                      ]
+                  try:
+                      next_node = StoryNodeLLM.model_validate(next_node)
+                  except Exception:
+                      next_node = StoryNodeLLM(
+                          content=next_node.get("content", "The journey continues..."),
+                          isEnding=next_node.get("isEnding", True),
+                          isWinningEnding=next_node.get("isWinningEnding", False),
+                          options=[]
+                      )
 
               child_node = cls._process_story_node(db, story_id, next_node, is_root=False)
               options_list.append({
