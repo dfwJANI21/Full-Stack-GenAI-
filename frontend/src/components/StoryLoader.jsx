@@ -4,6 +4,8 @@ import axios from 'axios';
 import LoadingStatus from "./LoadingStatus.jsx";
 import StoryGame from "./StoryGame.jsx";
 import {API_BASE_URL} from "../util.js";
+
+
 function StoryLoader() {
     const {id} = useParams();
     const navigate = useNavigate();
@@ -12,9 +14,7 @@ function StoryLoader() {
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        if (id){
-          loadStory(id)
-        }
+        loadStory(id)
     }, [id])
 
     const loadStory = async (storyId) => {
