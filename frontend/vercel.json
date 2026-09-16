@@ -2,8 +2,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination":
-"https://full-stack-genai.onrender.com/api/:path*"
+      "destination": "https://full-stack-genai.onrender.com/api/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
-  }
+  ]
 }
